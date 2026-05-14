@@ -18,7 +18,7 @@ const commands = [
         .setRequired(true))
     .addIntegerOption(option =>
       option.setName('dps')
-        .setDescription('Número de dps')
+        .setDescription('Número de DPS')
         .setRequired(true))
 ].map(command => command.toJSON());
 
@@ -27,12 +27,14 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 (async () => {
   try {
 
+    console.log('A registar comandos...');
+
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands },
     );
 
-    console.log('Slash commands registados.');
+    console.log('Comandos registados.');
 
   } catch (error) {
     console.error(error);
