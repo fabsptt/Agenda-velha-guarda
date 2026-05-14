@@ -1,181 +1,228 @@
 const {
-Client,
-GatewayIntentBits,
-SlashCommandBuilder,
-REST,
-Routes,
-EmbedBuilder,
-ActionRowBuilder,
-ButtonBuilder,
-ButtonStyle
+    Client,
+    GatewayIntentBits,
+    SlashCommandBuilder,
+    Routes,
+    REST,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    Events
 } = require('discord.js');
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 const client = new Client({
-intents: [GatewayIntentBits.Guilds]
+    intents: [GatewayIntentBits.Guilds]
 });
 
-// guardar eventos em memória
-const events = {};
+const eventos = new Map();
 
-// 🔥 REGISTAR COMANDO AUTOMATICAMENTE
-async function registerCommand() {
 const commands = [
-new SlashCommandBuilder()
-.setName('conteudo')
-.setDescription('Criar evento Albion')
-.addStringOption(o =>
-o.setName('data')
-.setDescription('Data e hora')
-.setRequired(true))
-.addIntegerOption(o =>
-o.setName('tanks')
-.setDescription('Tanks necessários')
-.setRequired(true))
-.addIntegerOption(o =>
-o.setName('healers')
-.setDescription('Healers necessários')
-.setRequired(true))
-.addIntegerOption(o =>
-o.setName('dps')
-.setDescription('DPS necessários')
-.setRequired(true))
- ].map(c => c.toJSON());
+    new SlashCommandBuilder()
+        .setName('conteudo')
+        .setDescription('Criar conteúdo')
+        .addStringOption(option =>
+            option
+                .setName('tipo')
+                .setDescription('Tipo de conteúdo')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Roads', value: 'Roads' },
+                    { name: 'Ava', value: 'Ava' },
+                    { name: 'Static', value: 'Static' },
+                    { name: 'Gank', value: 'Gank' },
+                    { name: 'ZvZ', value: 'ZvZ' }
+                )
+        )
+        .addStringOption(option =>
+            option
+                .setName('data')
+                .setDescription('Data')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName('hora')
+                .setDescription('Hora')
+                .setRequired(true)
+        )
+        .addIntegerOption(option =>
+            option
+                .setName('tanks')
+                .setDescription('Número tanks')
+                .setRequired(true)
+        )
+        .addIntegerOption(option =>
+            option
+                .setName('healers')
+                .setDescription('Número healers')
+                .setRequired(true)
+        )
+        .addIntegerOption(option =>
+            option
+                .setName('dps')
+                .setDescription('Número DPS')
+                .setRequired(true)
+        )
+].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
-await rest.put(
-Routes.applicationCommands(CLIENT_ID),
-{ body: commands }
-);
+(async () => {
+    try {
 
-console.log('✅ Slash command registado');
-}
+        await rest.put(
+            Routes.applicationCommands(CLIENT_ID),
+            { body: commands }
+        );
 
-client.once('ready', async () => {
-console.log(Bot online como ${client.user.tag}`);
+        console.log('Commands registados');
 
-try {
-await registerCommand();
-} catch (err) {
-console.error('Erro ao registar comandos:', err);
-}
+    } catch (error) {
+        console.error(error);
+    }
+})();
+
+client.once(Events.ClientReady, c => {
+    console.log(`Online: ${c.user.tag}`);
 });
 
-// 🎮 /conteudo
-client.on('interactionCreate', async interaction => {
+function criarEmbed(evento) {
 
-if (interaction.isChatInputCommand()) {
-
-if (interaction.commandName === 'conteudo') {
-
-const id = Date.now().toString();
-
-events[id] = {
-tanks: [],
-healers: [],
-dps: [],
-maxTanks: interaction.options.getInteger('tanks'),
-maxHealers: interaction.options.getInteger('healers'),
-maxDps: interaction.options.getInteger('dps')
-};
-
-const embed = new EmbedBuilder()
-.setTitle('⚔ Evento Albion Online')
-.setDescription(
-📅${interaction.options.getString('data')}
-
-🛡 Tanks: 0/ {events[id].maxHealers}
-🗡 DPS: 0/${events[id].maxDps}
-)
-.setColor('Green');
-
-const row = new ActionRowBuilder().addComponents(
-new ButtonBuilder()
-.setCustomId(tank_${id}`)
-.setLabel('🛡 Tank')
-.setStyle(ButtonStyle.Primary),
-
-new ButtonBuilder()
-.setCustomId(healer_${id}`)
-.setLabel('💚 Healer')
-.setStyle(ButtonStyle.Success),
-
-new ButtonBuilder()
-.setCustomId(dps_${id}`)
-.setLabel('🗡 DPS')
-.setStyle(ButtonStyle.Danger),
-
-new ButtonBuilder()
-.setCustomId(leave_${id}`)
-.setLabel('❌ Sair')
-.setStyle(ButtonStyle.Secondary)
-);
-
-await interaction.reply({
-embeds: [embed],
-components: [row]
-});
-}
+    return new EmbedBuilder()
+        .setTitle('⚔️ Evento Velha Guarda')
+        .setColor('#00b0f4')
+        .addFields(
+            {
+                name: '📌 Conteúdo',
+                value: evento.tipo
+            },
+            {
+                name: '📅 Data',
+                value: evento.data,
+                inline: true
+            },
+            {
+                name: '🕒 Hora',
+                value: evento.hora,
+                inline: true
+            },
+            {
+                name: `🛡️ Tanks ${evento.tanksUsers.length}/${evento.maxTanks}`,
+                value: evento.tanksUsers.join('\n') || 'vazio'
+            },
+            {
+                name: `✚ Healers ${evento.healersUsers.length}/${evento.maxHealers}`,
+                value: evento.healersUsers.join('\n') || 'vazio'
+            },
+            {
+                name: `🔪 DPS ${evento.dpsUsers.length}/${evento.maxDps}`,
+                value: evento.dpsUsers.join('\n') || 'vazio'
+            }
+        );
 }
 
-// 🔘 BOTÕES
-if (interaction.isButton()) {
+client.on(Events.InteractionCreate, async interaction => {
 
-const [type, id] = interaction.customId.split('_');
+    if (interaction.isChatInputCommand()) {
 
-const event = events[id];
-if (!event) return;
+        if (interaction.commandName === 'conteudo') {
 
-const user = interaction.user.username;
+            const evento = {
+                tipo: interaction.options.getString('tipo'),
+                data: interaction.options.getString('data'),
+                hora: interaction.options.getString('hora'),
 
-// remover de todas as roles primeiro
-event.tanks = event.tanks.filter(u => u !== user);
-event.healers = event.healers.filter(u => u !== user);
-event.dps = event.dps.filter(u => u !== user);
+                maxTanks: interaction.options.getInteger('tanks'),
+                maxHealers: interaction.options.getInteger('healers'),
+                maxDps: interaction.options.getInteger('dps'),
 
-// adicionar conforme botão
-if (type === 'tank') {
-if (event.tanks.length < event.maxTanks) {
-event.tanks.push(user);
-}
-}
+                tanksUsers: [],
+                healersUsers: [],
+                dpsUsers: []
+            };
 
-if (type === 'healer') {
-if (event.healers.length < event.maxHealers) {
-event.healers.push(user);
-}
-}
+            const embed = criarEmbed(evento);
 
-if (type === 'dps') {
-if (event.dps.length < event.maxDps) {
-event.dps.push(user);
-}
-}
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('tank')
+                    .setLabel('🛡️ Tank')
+                    .setStyle(ButtonStyle.Primary),
 
-if (type === 'leave') {
-// já removido acima
-}
+                new ButtonBuilder()
+                    .setCustomId('healer')
+                    .setLabel('✚ Healer')
+                    .setStyle(ButtonStyle.Success),
 
-const embed = new EmbedBuilder()
-.setTitle('⚔ Evento Albion Online')
-.setDescription(
-🛡 Tanks (${event.tanks.length}/${event.maxTanks}) ${event.tanks.join(', ') || '—'}
+                new ButtonBuilder()
+                    .setCustomId('dps')
+                    .setLabel('🔪 DPS')
+                    .setStyle(ButtonStyle.Danger),
 
-💚 Healers (${event.healers.length}/${event.maxHealers})
-`${event.healers.join(', ') || '—'}
+                new ButtonBuilder()
+                    .setCustomId('sair')
+                    .setLabel('❌ Sair')
+                    .setStyle(ButtonStyle.Secondary)
+            );
 
-🗡 DPS ( {event.maxDps})
-${event.dps.join(', ')}`
-)
-.setColor('Green');
+            const mensagem = await interaction.reply({
+                embeds: [embed],
+                components: [row],
+                fetchReply: true
+            });
 
-await interaction.update({
-embeds: [embed]
-});
-}
+            eventos.set(mensagem.id, evento);
+        }
+    }
+
+    if (interaction.isButton()) {
+
+        const evento = eventos.get(interaction.message.id);
+
+        if (!evento) return;
+
+        const nome = interaction.user.username;
+
+        evento.tanksUsers =
+            evento.tanksUsers.filter(x => x !== nome);
+
+        evento.healersUsers =
+            evento.healersUsers.filter(x => x !== nome);
+
+        evento.dpsUsers =
+            evento.dpsUsers.filter(x => x !== nome);
+
+        if (interaction.customId === 'tank') {
+
+            if (evento.tanksUsers.length < evento.maxTanks) {
+                evento.tanksUsers.push(nome);
+            }
+        }
+
+        if (interaction.customId === 'healer') {
+
+            if (evento.healersUsers.length < evento.maxHealers) {
+                evento.healersUsers.push(nome);
+            }
+        }
+
+        if (interaction.customId === 'dps') {
+
+            if (evento.dpsUsers.length < evento.maxDps) {
+                evento.dpsUsers.push(nome);
+            }
+        }
+
+        const novoEmbed = criarEmbed(evento);
+
+        await interaction.update({
+            embeds: [novoEmbed]
+        });
+    }
 });
 
 client.login(TOKEN);
