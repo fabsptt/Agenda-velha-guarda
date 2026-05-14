@@ -20,10 +20,6 @@ const client = new Client({
 
 const eventos = new Map();
 
-// =========================
-// SLASH COMMAND
-// =========================
-
 const commands = [
     new SlashCommandBuilder()
         .setName('conteudo')
@@ -35,8 +31,8 @@ const commands = [
                 .setRequired(true)
                 .addChoices(
                     { name: 'Roads', value: 'Roads' },
-                    { name: 'DGGrupo', value: 'DGGrupo' },
-                    { name: 'Estatica', value: 'Estatica' },
+                    { name: 'Ava', value: 'Ava' },
+                    { name: 'Static', value: 'Static' },
                     { name: 'Gank', value: 'Gank' },
                     { name: 'ZvZ', value: 'ZvZ' }
                 )
@@ -44,38 +40,34 @@ const commands = [
         .addStringOption(option =>
             option
                 .setName('data')
-                .setDescription('Ex: 16/05/2026')
+                .setDescription('Data')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName('hora')
-                .setDescription('Ex: 21:30')
+                .setDescription('Hora')
                 .setRequired(true)
         )
         .addIntegerOption(option =>
             option
                 .setName('tanks')
-                .setDescription('Número de tanks')
+                .setDescription('Número tanks')
                 .setRequired(true)
         )
         .addIntegerOption(option =>
             option
                 .setName('healers')
-                .setDescription('Número de healers')
+                .setDescription('Número healers')
                 .setRequired(true)
         )
         .addIntegerOption(option =>
             option
                 .setName('dps')
-                .setDescription('Número de DPS')
+                .setDescription('Número DPS')
                 .setRequired(true)
         )
 ].map(command => command.toJSON());
-
-// =========================
-// REGISTAR COMMANDS
-// =========================
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
@@ -87,24 +79,16 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
             { body: commands }
         );
 
-        console.log('✅ Commands registados');
+        console.log('Commands registados');
 
     } catch (error) {
         console.error(error);
     }
 })();
 
-// =========================
-// BOT ONLINE
-// =========================
-
 client.once(Events.ClientReady, c => {
-    console.log(`✅ Online: ${c.user.tag}`);
+    console.log(`Online: ${c.user.tag}`);
 });
-
-// =========================
-// EMBED
-// =========================
 
 function criarEmbed(evento) {
 
@@ -128,43 +112,26 @@ function criarEmbed(evento) {
             },
             {
                 name: `🛡️ Tanks ${evento.tanksUsers.length}/${evento.maxTanks}`,
-                value: evento.tanksUsers.join('\n') || 'vazio',
-                inline: false
+                value: evento.tanksUsers.join('\n') || 'vazio'
             },
             {
                 name: `✚ Healers ${evento.healersUsers.length}/${evento.maxHealers}`,
-                value: evento.healersUsers.join('\n') || 'vazio',
-                inline: false
+                value: evento.healersUsers.join('\n') || 'vazio'
             },
             {
                 name: `🔪 DPS ${evento.dpsUsers.length}/${evento.maxDps}`,
-                value: evento.dpsUsers.join('\n') || 'vazio',
-                inline: false
+                value: evento.dpsUsers.join('\n') || 'vazio'
             }
-        )
-        .setFooter({
-            text: 'Velha Guarda • Albion Online'
-        });
+        );
 }
 
-// =========================
-// INTERAÇÕES
-// =========================
-
 client.on(Events.InteractionCreate, async interaction => {
-
-    // =====================
-    // COMANDO /conteudo
-    // =====================
 
     if (interaction.isChatInputCommand()) {
 
         if (interaction.commandName === 'conteudo') {
 
             const evento = {
-
-                criador: interaction.user.id,
-
                 tipo: interaction.options.getString('tipo'),
                 data: interaction.options.getString('data'),
                 hora: interaction.options.getString('hora'),
@@ -181,7 +148,6 @@ client.on(Events.InteractionCreate, async interaction => {
             const embed = criarEmbed(evento);
 
             const row = new ActionRowBuilder().addComponents(
-
                 new ButtonBuilder()
                     .setCustomId('tank')
                     .setLabel('🛡️ Tank')
@@ -195,17 +161,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 new ButtonBuilder()
                     .setCustomId('dps')
                     .setLabel('🔪 DPS')
-                    .setStyle(ButtonStyle.Primary),
+                    .setStyle(ButtonStyle.Danger),
 
                 new ButtonBuilder()
                     .setCustomId('sair')
                     .setLabel('❌ Sair')
-                    .setStyle(ButtonStyle.Secondary),
-
-                new ButtonBuilder()
-                    .setCustomId('apagar')
-                    .setLabel('🗑️ Apagar')
-                    .setStyle(ButtonStyle.Danger)
+                    .setStyle(ButtonStyle.Secondary)
             );
 
             const mensagem = await interaction.reply({
@@ -218,42 +179,13 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 
-    // =====================
-    // BOTÕES
-    // =====================
-
     if (interaction.isButton()) {
 
         const evento = eventos.get(interaction.message.id);
 
         if (!evento) return;
 
-        const nome = interaction.member.displayName;
-
-        // =====================
-        // APAGAR EVENTO
-        // =====================
-
-        if (interaction.customId === 'apagar') {
-
-            if (interaction.user.id !== evento.criador) {
-
-                return interaction.reply({
-                    content: '❌ Só o criador pode apagar o evento.',
-                    ephemeral: true
-                });
-            }
-
-            eventos.delete(interaction.message.id);
-
-            await interaction.message.delete();
-
-            return;
-        }
-
-        // =====================
-        // REMOVER DE TODAS LISTAS
-        // =====================
+        const nome = interaction.user.username;
 
         evento.tanksUsers =
             evento.tanksUsers.filter(x => x !== nome);
@@ -264,75 +196,26 @@ client.on(Events.InteractionCreate, async interaction => {
         evento.dpsUsers =
             evento.dpsUsers.filter(x => x !== nome);
 
-        // =====================
-        // TANK
-        // =====================
-
         if (interaction.customId === 'tank') {
 
-            if (evento.tanksUsers.length >= evento.maxTanks) {
-
-                return interaction.reply({
-                    content: '❌ Slots de tank cheios.',
-                    ephemeral: true
-                });
+            if (evento.tanksUsers.length < evento.maxTanks) {
+                evento.tanksUsers.push(nome);
             }
-
-            evento.tanksUsers.push(nome);
         }
-
-        // =====================
-        // HEALER
-        // =====================
 
         if (interaction.customId === 'healer') {
 
-            if (evento.healersUsers.length >= evento.maxHealers) {
-
-                return interaction.reply({
-                    content: '❌ Slots de healer cheios.',
-                    ephemeral: true
-                });
+            if (evento.healersUsers.length < evento.maxHealers) {
+                evento.healersUsers.push(nome);
             }
-
-            evento.healersUsers.push(nome);
         }
-
-        // =====================
-        // DPS
-        // =====================
 
         if (interaction.customId === 'dps') {
 
-            if (evento.dpsUsers.length >= evento.maxDps) {
-
-                return interaction.reply({
-                    content: '❌ Slots de DPS cheios.',
-                    ephemeral: true
-                });
+            if (evento.dpsUsers.length < evento.maxDps) {
+                evento.dpsUsers.push(nome);
             }
-
-            evento.dpsUsers.push(nome);
         }
-
-        // =====================
-        // SAIR
-        // =====================
-
-        if (interaction.customId === 'sair') {
-
-            const novoEmbed = criarEmbed(evento);
-
-            await interaction.update({
-                embeds: [novoEmbed]
-            });
-
-            return;
-        }
-
-        // =====================
-        // ATUALIZAR EMBED
-        // =====================
 
         const novoEmbed = criarEmbed(evento);
 
