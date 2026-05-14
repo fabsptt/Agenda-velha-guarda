@@ -1,10 +1,10 @@
 const {
   Client,
   GatewayIntentBits,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  EmbedBuilder,
   Events
 } = require('discord.js');
 
@@ -15,50 +15,53 @@ const client = new Client({
   ]
 });
 
+const TOKEN = process.env.TOKEN;
+
 client.once('ready', () => {
-  console.log(`Bot online!`);
+  console.log(`Bot ligado como ${client.user.tag}`);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
 
+  // COMANDO /conteudo
   if (interaction.isChatInputCommand()) {
 
-    if (interaction.commandName === 'evento') {
+    if (interaction.commandName === 'conteudo') {
+
+      const data = interaction.options.getString('data');
+      const tanks = interaction.options.getInteger('tanks');
+      const healers = interaction.options.getInteger('healers');
+      const dps = interaction.options.getInteger('dps');
 
       const embed = new EmbedBuilder()
-        .setTitle('⚔️ Velha Guarda Evento ⚔️')
-        .setDescription(`
-📍 Static T6
-🕒 22:00
+        .setTitle('⚔ Conteúdo Albion')
+        .setDescription(
+`📅 ${data}
 
-🛡️ Tank (0/2)
+🛡 Tanks: 0/${tanks}
 
-✚ Healer (0/1)
+💚 Healers: 0/${healers}
 
-🗡️ DPS (0/5)
-        `)
-        .setColor('Gold');
+🗡 DPS: 0/${dps}`
+        )
+        .setColor('Green');
 
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('tank')
-            .setLabel('Tank')
-            .setEmoji('🛡️')
-            .setStyle(ButtonStyle.Primary),
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('tank')
+          .setLabel('🛡 Tank')
+          .setStyle(ButtonStyle.Primary),
 
-          new ButtonBuilder()
-            .setCustomId('healer')
-            .setLabel('Healer')
-            .setEmoji('✚')
-            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('healer')
+          .setLabel('💚 Healer')
+          .setStyle(ButtonStyle.Success),
 
-          new ButtonBuilder()
-            .setCustomId('dps')
-            .setLabel('DPS')
-            .setEmoji('🗡️')
-            .setStyle(ButtonStyle.Danger)
-        );
+        new ButtonBuilder()
+          .setCustomId('dps')
+          .setLabel('🗡 DPS')
+          .setStyle(ButtonStyle.Danger),
+      );
 
       await interaction.reply({
         embeds: [embed],
@@ -66,6 +69,15 @@ client.on(Events.InteractionCreate, async interaction => {
       });
     }
   }
+
+  // BOTÕES
+  if (interaction.isButton()) {
+
+    await interaction.reply({
+      content: `${interaction.user.username} entrou como ${interaction.customId}`,
+      ephemeral: true
+    });
+  }
 });
 
-client.login(process.env.TOKEN);
+client.login(TOKEN);
