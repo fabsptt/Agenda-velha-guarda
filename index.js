@@ -31,8 +31,8 @@ const commands = [
                 .setRequired(true)
                 .addChoices(
                     { name: 'Roads', value: 'Roads' },
-                    { name: 'Ava', value: 'Ava' },
-                    { name: 'Static', value: 'Static' },
+                    { name: 'DGGrupo', value: 'DGGrupo' },
+                    { name: 'Estatica', value: 'Estatica' },
                     { name: 'Gank', value: 'Gank' },
                     { name: 'ZvZ', value: 'ZvZ' }
                 )
@@ -166,8 +166,14 @@ client.on(Events.InteractionCreate, async interaction => {
                 new ButtonBuilder()
                     .setCustomId('sair')
                     .setLabel('❌ Sair')
-                    .setStyle(ButtonStyle.Secondary)
+                    .setStyle(ButtonStyle.Secondary),
+
+                new ButtonBuilder()
+    .setCustomId('apagar')
+    .setLabel('🗑️ Apagar')
+    .setStyle(ButtonStyle.Danger)
             );
+
 
             const mensagem = await interaction.reply({
                 embeds: [embed],
@@ -202,7 +208,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 evento.tanksUsers.push(nome);
             }
         }
-
         if (interaction.customId === 'healer') {
 
             if (evento.healersUsers.length < evento.maxHealers) {
@@ -216,7 +221,16 @@ client.on(Events.InteractionCreate, async interaction => {
                 evento.dpsUsers.push(nome);
             }
         }
+// APAGAR EVENTO
 
+if (interaction.customId === 'apagar') {
+
+    eventos.delete(interaction.message.id);
+
+    await interaction.message.delete();
+
+    return;
+}
         const novoEmbed = criarEmbed(evento);
 
         await interaction.update({
