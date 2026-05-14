@@ -2,8 +2,8 @@ const {
     Client,
     GatewayIntentBits,
     SlashCommandBuilder,
-    Routes,
     REST,
+    Routes,
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
@@ -18,211 +18,176 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
 
-const eventos = new Map();
+// memória dos eventos
+const events = new Map();
 
+/* ---------------- REGISTER COMMAND ---------------- */
 const commands = [
     new SlashCommandBuilder()
         .setName('conteudo')
-        .setDescription('Criar conteúdo')
-        .addStringOption(option =>
-            option
-                .setName('tipo')
+        .setDescription('Criar evento Albion')
+        .addStringOption(opt =>
+            opt.setName('tipo')
                 .setDescription('Tipo de conteúdo')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Roads', value: 'Roads' },
-                    { name: 'Ava', value: 'Ava' },
-                    { name: 'Static', value: 'Static' },
+                    { name: 'Avaroads', value: 'Avaroads' },
+                    { name: 'DGS Grupo', value: 'DGS Grupo' },
                     { name: 'Gank', value: 'Gank' },
-                    { name: 'ZvZ', value: 'ZvZ' }
+                    { name: 'Estática', value: 'Estática' },
+                    { name: 'ZVZ', value: 'ZVZ' }
                 )
         )
-        .addStringOption(option =>
-            option
-                .setName('data')
-                .setDescription('Data')
-                .setRequired(true)
+        .addStringOption(opt =>
+            opt.setName('data').setDescription('Ex: 25/05/2026').setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName('hora')
-                .setDescription('Hora')
-                .setRequired(true)
+        .addStringOption(opt =>
+            opt.setName('hora').setDescription('Ex: 21:30').setRequired(true)
         )
-        .addIntegerOption(option =>
-            option
-                .setName('tanks')
-                .setDescription('Número tanks')
-                .setRequired(true)
+        .addIntegerOption(opt =>
+            opt.setName('tanks').setDescription('Número de tanks').setRequired(true)
         )
-        .addIntegerOption(option =>
-            option
-                .setName('healers')
-                .setDescription('Número healers')
-                .setRequired(true)
+        .addIntegerOption(opt =>
+            opt.setName('healers').setDescription('Número de healers').setRequired(true)
         )
-        .addIntegerOption(option =>
-            option
-                .setName('dps')
-                .setDescription('Número DPS')
-                .setRequired(true)
+        .addIntegerOption(opt =>
+            opt.setName('dps').setDescription('Número de DPS').setRequired(true)
         )
-].map(command => command.toJSON());
+].map(cmd => cmd.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
-(async () => {
-    try {
+async function registerCommands() {
+    await rest.put(
+        Routes.applicationCommands(CLIENT_ID),
+        { body: commands }
+    );
+    console.log("Slash commands registados!");
+}
 
-        await rest.put(
-            Routes.applicationCommands(CLIENT_ID),
-            { body: commands }
-        );
-
-        console.log('Commands registados');
-
-    } catch (error) {
-        console.error(error);
-    }
-})();
-
-client.once(Events.ClientReady, c => {
-    console.log(`Online: ${c.user.tag}`);
-});
-
-function criarEmbed(evento) {
-
+/* ---------------- EMBED CREATOR ---------------- */
+function createEmbed(event) {
     return new EmbedBuilder()
-        .setTitle('⚔️ Evento Velha Guarda')
-        .setColor('#00b0f4')
+        .setTitle(`📌 Evento Albion - ${event.tipo}`)
+        .setColor(0x00AE86)
         .addFields(
+            { name: "📅 Data", value: event.data, inline: true },
+            { name: "⏰ Hora", value: event.hora, inline: true },
+            { name: "🛡 Tanks", value: `${event.tanksLimit}`, inline: true },
+            { name: "💚 Healers", value: `${event.healersLimit}`, inline: true },
+            { name: "⚔ DPS", value: `${event.dpsLimit}`, inline: true },
             {
-                name: '📌 Conteúdo',
-                value: evento.tipo
-            },
-            {
-                name: '📅 Data',
-                value: evento.data,
-                inline: true
-            },
-            {
-                name: '🕒 Hora',
-                value: evento.hora,
-                inline: true
-            },
-            {
-                name: `🛡️ Tanks ${evento.tanksUsers.length}/${evento.maxTanks}`,
-                value: evento.tanksUsers.join('\n') || 'vazio'
-            },
-            {
-                name: `✚ Healers ${evento.healersUsers.length}/${evento.maxHealers}`,
-                value: evento.healersUsers.join('\n') || 'vazio'
-            },
-            {
-                name: `🔪 DPS ${evento.dpsUsers.length}/${evento.maxDps}`,
-                value: evento.dpsUsers.join('\n') || 'vazio'
+                name: "👥 Inscritos",
+                value: event.players.length > 0 ? event.players.join("\n") : "Ninguém ainda"
             }
         );
 }
 
+/* ---------------- BUTTONS ---------------- */
 client.on(Events.InteractionCreate, async interaction => {
 
+    // Slash command
     if (interaction.isChatInputCommand()) {
 
-        if (interaction.commandName === 'conteudo') {
+        if (interaction.commandName === "conteudo") {
 
-            const evento = {
-                tipo: interaction.options.getString('tipo'),
-                data: interaction.options.getString('data'),
-                hora: interaction.options.getString('hora'),
+            const id = Date.now().toString();
 
-                maxTanks: interaction.options.getInteger('tanks'),
-                maxHealers: interaction.options.getInteger('healers'),
-                maxDps: interaction.options.getInteger('dps'),
-
-                tanksUsers: [],
-                healersUsers: [],
-                dpsUsers: []
+            const event = {
+                id,
+                tipo: interaction.options.getString("tipo"),
+                data: interaction.options.getString("data"),
+                hora: interaction.options.getString("hora"),
+                tanksLimit: interaction.options.getInteger("tanks"),
+                healersLimit: interaction.options.getInteger("healers"),
+                dpsLimit: interaction.options.getInteger("dps"),
+                players: [],
+                creator: interaction.user.id
             };
 
-            const embed = criarEmbed(evento);
+            events.set(id, event);
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setCustomId('tank')
-                    .setLabel('🛡️ Tank')
-                    .setStyle(ButtonStyle.Primary),
-
-                new ButtonBuilder()
-                    .setCustomId('healer')
-                    .setLabel('✚ Healer')
+                    .setCustomId(`join_${id}`)
+                    .setLabel("Participar")
                     .setStyle(ButtonStyle.Success),
 
                 new ButtonBuilder()
-                    .setCustomId('dps')
-                    .setLabel('🔪 DPS')
-                    .setStyle(ButtonStyle.Danger),
+                    .setCustomId(`leave_${id}`)
+                    .setLabel("Sair")
+                    .setStyle(ButtonStyle.Secondary),
 
                 new ButtonBuilder()
-                    .setCustomId('sair')
-                    .setLabel('❌ Sair')
-                    .setStyle(ButtonStyle.Secondary)
+                    .setCustomId(`delete_${id}`)
+                    .setLabel("Apagar")
+                    .setStyle(ButtonStyle.Danger)
             );
 
-            const mensagem = await interaction.reply({
-                embeds: [embed],
-                components: [row],
-                fetchReply: true
+            await interaction.reply({
+                embeds: [createEmbed(event)],
+                components: [row]
             });
-
-            eventos.set(mensagem.id, evento);
         }
     }
 
+    // BUTTONS
     if (interaction.isButton()) {
 
-        const evento = eventos.get(interaction.message.id);
+        const [action, id] = interaction.customId.split("_");
+        const event = events.get(id);
+        if (!event) return;
 
-        if (!evento) return;
+        const userTag = interaction.user.tag;
 
-        const nome = interaction.user.username;
-
-        evento.tanksUsers =
-            evento.tanksUsers.filter(x => x !== nome);
-
-        evento.healersUsers =
-            evento.healersUsers.filter(x => x !== nome);
-
-        evento.dpsUsers =
-            evento.dpsUsers.filter(x => x !== nome);
-
-        if (interaction.customId === 'tank') {
-
-            if (evento.tanksUsers.length < evento.maxTanks) {
-                evento.tanksUsers.push(nome);
+        if (action === "join") {
+            if (!event.players.includes(userTag)) {
+                event.players.push(userTag);
             }
         }
 
-        if (interaction.customId === 'healer') {
-
-            if (evento.healersUsers.length < evento.maxHealers) {
-                evento.healersUsers.push(nome);
-            }
+        if (action === "leave") {
+            event.players = event.players.filter(p => p !== userTag);
         }
 
-        if (interaction.customId === 'dps') {
-
-            if (evento.dpsUsers.length < evento.maxDps) {
-                evento.dpsUsers.push(nome);
+        if (action === "delete") {
+            if (interaction.user.id !== event.creator && !interaction.memberPermissions.has("Administrator")) {
+                return interaction.reply({ content: "Sem permissão.", ephemeral: true });
             }
+            events.delete(id);
+            return interaction.message.delete();
         }
 
-        const novoEmbed = criarEmbed(evento);
+        const updatedRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`join_${id}`)
+                .setLabel("Participar")
+                .setStyle(ButtonStyle.Success),
+
+            new ButtonBuilder()
+                .setCustomId(`leave_${id}`)
+                .setLabel("Sair")
+                .setStyle(ButtonStyle.Secondary),
+
+            new ButtonBuilder()
+                .setCustomId(`delete_${id}`)
+                .setLabel("Apagar")
+                .setStyle(ButtonStyle.Danger)
+        );
 
         await interaction.update({
-            embeds: [novoEmbed]
+            embeds: [createEmbed(event)],
+            components: [updatedRow]
         });
     }
 });
 
-client.login(TOKEN);
+/* ---------------- START ---------------- */
+client.once("ready", async () => {
+    console.log(`Bot online como ${client.user.tag}`);
+});
+
+(async () => {
+    await registerCommands();
+    client.login(TOKEN);
+})();
