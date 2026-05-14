@@ -1,7 +1,6 @@
 {
-  "name": "bot-albion",
+  "name": "velha-guarda-bot",
   "version": "1.0.0",
-  "description": "Bot Albion Discord",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
