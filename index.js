@@ -31,8 +31,8 @@ const commands = [
                 .setRequired(true)
                 .addChoices(
                     { name: 'Avaroads', value: 'Avaroads' },
-                    { name: 'DGGrupo, value: 'DGGrupo' },
-                    { name: 'Estatica, value: 'Estatica' },
+                    { name: 'DGGrupo', value: 'DGGrupo' },
+                    { name: 'Estatica', value: 'Estatica' },
                     { name: 'Gank', value: 'Gank' },
                     { name: 'ZvZ', value: 'ZvZ' }
                 )
