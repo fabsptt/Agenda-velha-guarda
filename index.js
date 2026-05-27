@@ -1,182 +1,226 @@
 const {
-  Client,
-  GatewayIntentBits,
-  SlashCommandBuilder,
-  Routes,
-  REST,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  Events,
-} = require("discord.js");
+Client,
+GatewayIntentBits,
+SlashCommandBuilder,
+Routes,
+REST,
+EmbedBuilder,
+ActionRowBuilder,
+ButtonBuilder,
+ButtonStyle,
+Events
+} = require('discord.js');
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+intents: [GatewayIntentBits.Guilds]
 });
 
-const conteudos = [
-  "AvaRoads",
-  "DgGrupo",
-  "Estática",
-  "Gank",
-  "Facção",
-  "HCE",
-  "ZvZ",
-];
+const eventos = new Map();
 
-const saidas = [
-  "Lymhurst",
-  "Lymhurst Portal",
-  "Brecilien",
-];
+const commands = [
+new SlashCommandBuilder()
+.setName('conteudo')
+.setDescription('Criar conteúdo')
+.addStringOption(option =>
+option
+.setName('tipo')
+.setDescription('Tipo de conteúdo')
+.setRequired(true)
+.addChoices(
+{ name: 'Avaroads', value: 'Avaroads' },
+{ name: 'DGGrupo', value: 'DGGrupo' },
+{ name: 'Estatica', value: 'Estatica' },
+{ name: 'Gank', value: 'Gank' },
+{ name: 'ZvZ', value: 'ZvZ' }
+)
+)
+.addStringOption(option =>
+option
+.setName('data')
+.setDescription('Data')
+.setRequired(true)
+)
+.addStringOption(option =>
+option
+.setName('hora')
+.setDescription('Hora')
+.setRequired(true)
+)
+.addIntegerOption(option =>
+option
+.setName('tanks')
+.setDescription('Número tanks')
+.setRequired(true)
+)
+.addIntegerOption(option =>
+option
+.setName('healers')
+.setDescription('Número healers')
+.setRequired(true)
+)
+.addIntegerOption(option =>
+option
+.setName('dps')
+.setDescription('Número DPS')
+.setRequired(true)
+)
+].map(command => command.toJSON());
 
-const tiers = [
-  "4", "4.1", "4.2", "4.3", "4.4",
-  "5", "5.1", "5.2", "5.3", "5.4",
-  "6", "6.1", "6.2", "6.3", "6.4",
-  "7", "7.1", "7.2", "7.3", "7.4",
-  "8.0", "8.1", "8.2", "8.3", "8.4"
-];
-
-const command = new SlashCommandBuilder()
-  .setName("conteudo")
-  .setDescription("Criar conteúdo da guilda")
-  .addStringOption(option =>
-    option
-      .setName("tipo")
-      .setDescription("Tipo de conteúdo")
-      .setRequired(true)
-      .addChoices(...conteudos.map(c => ({ name: c, value: c })))
-  )
-  .addStringOption(option =>
-    option
-      .setName("saida")
-      .setDescription("Cidade de saída")
-      .setRequired(true)
-      .addChoices(...saidas.map(s => ({ name: s, value: s })))
-  )
-  .addStringOption(option =>
-    option
-      .setName("data")
-      .setDescription("Ex: 28/05/2026")
-      .setRequired(true)
-  )
-  .addStringOption(option =>
-    option
-      .setName("hora")
-      .setDescription("Ex: 21:00")
-      .setRequired(true)
-  )
-  .addStringOption(option =>
-    option
-      .setName("tier")
-      .setDescription("Tier obrigatório")
-      .setRequired(true)
-      .addChoices(...tiers.map(t => ({ name: t, value: t })))
-  );
-
-const rest = new REST({ version: "10" }).setToken(TOKEN);
+const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
-  try {
-    await rest.put(
-      Routes.applicationCommands(CLIENT_ID),
-      { body: [command.toJSON()] }
-    );
+try {
 
-    console.log("Comando registado.");
-  } catch (error) {
-    console.error(error);
-  }
+await rest.put(
+Routes.applicationCommands(CLIENT_ID),
+{ body: commands }
+);
+
+console.log('Commands registados');
+
+} catch (error) {
+console.error(error);
+}
 })();
+
+client.once(Events.ClientReady, c => {
+console.log(Online: ${c.user.tag}`);
+});
+
+function criarEmbed(evento) {
+
+return new EmbedBuilder()
+.setTitle('⚔️ Evento Velha Guarda')
+.setColor('#00b0f4')
+.addFields(
+{
+name: '📌 Conteúdo',
+value: evento.tipo
+},
+{
+name: '📅 Data',
+value: evento.data,
+inline: true
+},
+{
+name: '🕒 Hora',
+value: evento.hora,
+inline: true
+},
+{
+name: 🛡️ Tanks${evento.tanksUsers.length}/latex
+{evento.maxTanks}`, value: evento.tanksUsers.join('\n') || 'vazio' }, { name: `✚ Healers 
+
+{evento.healersUsers.length}/latex
+{evento.maxHealers}`, value: evento.healersUsers.join('\n') || 'vazio' }, { name: `🔪 DPS 
+
+{evento.dpsUsers.length}/${evento.maxDps}`,
+value: evento.dpsUsers.join('\n') || 'vazio'
+}
+);
+}
 
 client.on(Events.InteractionCreate, async interaction => {
 
-  if (interaction.isChatInputCommand()) {
+if (interaction.isChatInputCommand()) {
 
-    const tipo = interaction.options.getString("tipo");
-    const saida = interaction.options.getString("saida");
-    const data = interaction.options.getString("data");
-    const hora = interaction.options.getString("hora");
-    const tier = interaction.options.getString("tier");
+if (interaction.commandName === 'conteudo') {
 
-    const jogadores = {
-      tank: [],
-      healer: [],
-      dps: []
-    };
+const evento = {
+tipo: interaction.options.getString('tipo'),
+data: interaction.options.getString('data'),
+hora: interaction.options.getString('hora'),
 
-    const embed = new EmbedBuilder()
-      .setTitle("📢 Conteúdo Velha Guarda")
-      .setDescription(
-`⚔ Tipo: ${tipo}
-📍 Saída: ${saida}
-📅 Data: ${data}
-🕒 Hora: ${hora}
-🎒 Tier obrigatório: ${tier}
+maxTanks: interaction.options.getInteger('tanks'),
+maxHealers: interaction.options.getInteger('healers'),
+maxDps: interaction.options.getInteger('dps'),
 
-🛡 Tanks (0)
+tanksUsers: [],
+healersUsers: [],
+dpsUsers: []
+};
 
-✚ Healers (0)
+const embed = criarEmbed(evento);
 
-⚔ DPS (0)`
-      )
-      .setColor("Green");
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId('tank')
+.setLabel('🛡️ Tank')
+.setStyle(ButtonStyle.Primary),
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("tank")
-        .setLabel("Tank")
-        .setEmoji("🛡")
-        .setStyle(ButtonStyle.Primary),
+new ButtonBuilder()
+.setCustomId('healer')
+.setLabel('✚ Healer')
+.setStyle(ButtonStyle.Success),
 
-      new ButtonBuilder()
-        .setCustomId("healer")
-        .setLabel("Healer")
-        .setEmoji("✚")
-        .setStyle(ButtonStyle.Success),
+new ButtonBuilder()
+.setCustomId('dps')
+.setLabel('🔪 DPS')
+.setStyle(ButtonStyle.Danger),
 
-      new ButtonBuilder()
-        .setCustomId("dps")
-        .setLabel("DPS")
-        .setEmoji("⚔")
-        .setStyle(ButtonStyle.Danger),
+new ButtonBuilder()
+.setCustomId('sair')
+.setLabel('❌ Sair')
+.setStyle(ButtonStyle.Secondary)
+);
 
-      new ButtonBuilder()
-        .setCustomId("sair")
-        .setLabel("Sair")
-        .setEmoji("❌")
-        .setStyle(ButtonStyle.Secondary),
+const mensagem = await interaction.reply({
+embeds: [embed],
+components: [row],
+fetchReply: true
+});
 
-      new ButtonBuilder()
-        .setCustomId("cancelar")
-        .setLabel("Cancelar")
-        .setEmoji("🚫")
-        .setStyle(ButtonStyle.Secondary)
-    );
+eventos.set(mensagem.id, evento);
+}
+}
 
-    const msg = await interaction.reply({
-      embeds: [embed],
-      components: [row]
-    });
+if (interaction.isButton()) {
 
-  }
+const evento = eventos.get(interaction.message.id);
 
-  if (interaction.isButton()) {
+if (!evento) return;
 
-    const member = interaction.member.displayName;
+const nome = interaction.user.username;
 
-    await interaction.reply({
-      content: `✅ ${member} clicou em ${interaction.customId}`,
-      ephemeral: true
-    });
+evento.tanksUsers =
+evento.tanksUsers.filter(x => x !== nome);
 
-  }
+evento.healersUsers =
+evento.healersUsers.filter(x => x !== nome);
 
+evento.dpsUsers =
+evento.dpsUsers.filter(x => x !== nome);
+
+if (interaction.customId === 'tank') {
+
+if (evento.tanksUsers.length < evento.maxTanks) {
+evento.tanksUsers.push(nome);
+}
+}
+
+if (interaction.customId === 'healer') {
+
+if (evento.healersUsers.length < evento.maxHealers) {
+evento.healersUsers.push(nome);
+}
+}
+
+if (interaction.customId === 'dps') {
+
+if (evento.dpsUsers.length < evento.maxDps) {
+evento.dpsUsers.push(nome);
+}
+}
+
+const novoEmbed = criarEmbed(evento);
+
+await interaction.update({
+embeds: [novoEmbed]
+});
+}
 });
 
 client.login(TOKEN);
