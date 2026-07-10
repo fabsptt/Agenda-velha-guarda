@@ -92,17 +92,17 @@ const command = new SlashCommandBuilder()
     .addIntegerOption(option =>
         option.setName('tanks')
             .setDescription('Número de tanks')
-            .setRequired(False))
+            .setRequired(true))
 
     .addIntegerOption(option =>
         option.setName('healers')
             .setDescription('Número de healers')
-            .setRequired(False))
+            .setRequired(true))
 
     .addIntegerOption(option =>
         option.setName('dps')
             .setDescription('Número de DPS')
-            .setRequired(False));
+            .setRequired(true));
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
@@ -124,100 +124,46 @@ client.once(Events.ClientReady, () => {
 });
 
 function criarEmbed(evento) {
-    let descricao = `📍 Saída: ${evento.saida}\n📅 Data: ${evento.data}\n⏰ Hora: ${evento.hora}\n🎯 Tier obrigatório: ${evento.tier}\n\n`;
-
-    if (evento.tipo === 'Dg Avaloniana') {
-        descricao += `🛡 Tank (${evento.tank.length}/1)\n${evento.tank.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `🛡 Off Tank (${evento.offTank.length}/1)\n${evento.offTank.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `💚 Main Healer (${evento.mainHealer.length}/1)\n${evento.mainHealer.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `💚 Healer Dps (${evento.healerDps.length}/1)\n${evento.healerDps.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `🧙‍♂️ Great Arcane Staff (${evento.greatArcane.length}/1)\n${evento.greatArcane.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `💀 Shadow Caller (${evento.shadowCaller.length}/1)\n${evento.shadowCaller.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `🌾 Crystal Reaper (${evento.crystalReaper.length}/99)\n${evento.crystalReaper.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `⚔ Other Dps (${evento.otherDps.length}/99)\n${evento.otherDps.join('\n') || 'Nenhum'}\n`;
-    } else {
-        descricao += `🛡 Tanks (${evento.tanks.length}/${evento.maxTanks})\n${evento.tanks.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `💚 Healers (${evento.healers.length}/${evento.maxHealers})\n${evento.healers.join('\n') || 'Nenhum'}\n\n`;
-        descricao += `⚔ DPS (${evento.dps.length}/${evento.maxDps})\n${evento.dps.join('\n') || 'Nenhum'}\n`;
-    }
-
     return new EmbedBuilder()
         .setTitle(`⚔ ${evento.tipo}`)
-        .setDescription(descricao)
+        .setDescription(
+`📍 Saída: ${evento.saida}
+📅 Data: ${evento.data}
+⏰ Hora: ${evento.hora}
+🎯 Tier obrigatório: ${evento.tier}
+
+🛡 Tanks (${evento.tanks.length}/${evento.maxTanks})
+${evento.tanks.join('\n') || 'Nenhum'}
+
+💚 Healers (${evento.healers.length}/${evento.maxHealers})
+${evento.healers.join('\n') || 'Nenhum'}
+
+⚔ DPS (${evento.dps.length}/${evento.maxDps})
+${evento.dps.join('\n') || 'Nenhum'}
+`
+        )
         .setColor('Green');
 }
 
 client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.isChatInputCommand()) {
-        const tipoConteudo = interaction.options.getString('tipo');
 
         const evento = {
-            tipo: tipoConteudo,
+            tipo: interaction.options.getString('tipo'),
             saida: interaction.options.getString('saida'),
             data: interaction.options.getString('data'),
             hora: interaction.options.getString('hora'),
             tier: interaction.options.getString('tier'),
+
+            maxTanks: interaction.options.getInteger('tanks'),
+            maxHealers: interaction.options.getInteger('healers'),
+            maxDps: interaction.options.getInteger('dps'),
+
+            tanks: [],
+            healers: [],
+            dps: []
         };
-
-        const components = [];
-
-        if (tipoConteudo === 'Dg Avaloniana') {
-            // Inicializa listas específicas da Ava
-            evento.tank = [];
-            evento.offTank = [];
-            evento.mainHealer = [];
-            evento.healerDps = [];
-            evento.greatArcane = [];
-            evento.shadowCaller = [];
-            evento.crystalReaper = [];
-            evento.otherDps = [];
-
-            // Linha 1 de botões (Máximo 5 botões por linha)
-            const row1 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('ava_tank').setLabel('🛡 Tank').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('ava_offTank').setLabel('🛡 Off Tank').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('ava_mainHealer').setLabel('💚 Main Healer').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('ava_healerDps').setLabel('💚 Healer Dps').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('ava_greatArcane').setLabel('🧙‍♂️ Great Arcane').setStyle(ButtonStyle.Primary)
-            );
-
-            // Linha 2 de botões
-            const row2 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('ava_shadowCaller').setLabel('💀 Shadow Caller').setStyle(ButtonStyle.Danger),
-                new ButtonBuilder().setCustomId('ava_crystalReaper').setLabel('🌾 Crystal Reaper').setStyle(ButtonStyle.Danger),
-                new ButtonBuilder().setCustomId('ava_otherDps').setLabel('⚔ Other Dps').setStyle(ButtonStyle.Danger),
-                new ButtonBuilder().setCustomId('sair').setLabel('❌ Sair').setStyle(ButtonStyle.Secondary)
-            );
-
-            components.push(row1, row2);
-        } else {
-            // Lógica normal para outros conteúdos
-            evento.maxTanks = interaction.options.getInteger('tanks') || 0;
-            evento.maxHealers = interaction.options.getInteger('healers') || 0;
-            evento.maxDps = interaction.options.getInteger('dps') || 0;
-            evento.tanks = [];
-            evento.healers = [];
-            evento.dps = [];
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('tank').setLabel('🛡 Tank').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('healer').setLabel('💚 Healer').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('dps').setLabel('⚔ DPS').setStyle(ButtonStyle.Danger),
-                new ButtonBuilder().setCustomId('sair').setLabel('❌ Sair').setStyle(ButtonStyle.Secondary)
-            );
-
-            components.push(row);
-        }
-
-        const msg = await interaction.reply({
-            embeds: [criarEmbed(evento)],
-            components: components,
-            fetchReply: true
-        });
-
-        eventos.set(msg.id, evento);
-    }
 
         const buttons = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -251,44 +197,31 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.isButton()) {
+
         const evento = eventos.get(interaction.message.id);
+
         if (!evento) return;
 
         const nome = interaction.member.displayName || interaction.user.username;
 
-        // Limpa o utilizador de todas as listas possíveis (Normais e Avaloniana)
-        if (evento.tanks) evento.tanks = evento.tanks.filter(x => x !== nome);
-        if (evento.healers) evento.healers = evento.healers.filter(x => x !== nome);
-        if (evento.dps) evento.dps = evento.dps.filter(x => x !== nome);
-        
-        if (evento.tank) evento.tank = evento.tank.filter(x => x !== nome);
-        if (evento.offTank) evento.offTank = evento.offTank.filter(x => x !== nome);
-        if (evento.mainHealer) evento.mainHealer = evento.mainHealer.filter(x => x !== nome);
-        if (evento.healerDps) evento.healerDps = evento.healerDps.filter(x => x !== nome);
-        if (evento.greatArcane) evento.greatArcane = evento.greatArcane.filter(x => x !== nome);
-        if (evento.shadowCaller) evento.shadowCaller = evento.shadowCaller.filter(x => x !== nome);
-        if (evento.crystalReaper) evento.crystalReaper = evento.crystalReaper.filter(x => x !== nome);
-        if (evento.otherDps) evento.otherDps = evento.otherDps.filter(x => x !== nome);
+        evento.tanks = evento.tanks.filter(x => x !== nome);
+        evento.healers = evento.healers.filter(x => x !== nome);
+        evento.dps = evento.dps.filter(x => x !== nome);
 
-        // Se clicar em Sair, apenas atualiza a embed (já foi removido acima)
-        if (interaction.customId === 'sair') {
-            return await interaction.update({ embeds: [criarEmbed(evento)] });
+        if (interaction.customId === 'tank') {
+            if (evento.tanks.length < evento.maxTanks)
+                evento.tanks.push(nome);
         }
 
-        // Condições para conteúdo normal
-        if (interaction.customId === 'tank' && evento.tanks.length < evento.maxTanks) evento.tanks.push(nome);
-        if (interaction.customId === 'healer' && evento.healers.length < evento.maxHealers) evento.healers.push(nome);
-        if (interaction.customId === 'dps' && evento.dps.length < evento.maxDps) evento.dps.push(nome);
+        if (interaction.customId === 'healer') {
+            if (evento.healers.length < evento.maxHealers)
+                evento.healers.push(nome);
+        }
 
-        // Condições para DG Avaloniana (com limites pedidos)
-        if (interaction.customId === 'ava_tank' && evento.tank.length < 1) evento.tank.push(nome);
-        if (interaction.customId === 'ava_offTank' && evento.offTank.length < 1) evento.offTank.push(nome);
-        if (interaction.customId === 'ava_mainHealer' && evento.mainHealer.length < 1) evento.mainHealer.push(nome);
-        if (interaction.customId === 'ava_healerDps' && evento.healerDps.length < 1) evento.healerDps.push(nome);
-        if (interaction.customId === 'ava_greatArcane' && evento.greatArcane.length < 1) evento.greatArcane.push(nome);
-        if (interaction.customId === 'ava_shadowCaller' && evento.shadowCaller.length < 1) evento.shadowCaller.push(nome);
-        if (interaction.customId === 'ava_crystalReaper' && evento.crystalReaper.length < 99) evento.crystalReaper.push(nome);
-        if (interaction.customId === 'ava_otherDps' && evento.otherDps.length < 99) evento.otherDps.push(nome);
+        if (interaction.customId === 'dps') {
+            if (evento.dps.length < evento.maxDps)
+                evento.dps.push(nome);
+        }
 
         await interaction.update({
             embeds: [criarEmbed(evento)]
